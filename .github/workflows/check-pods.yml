@@ -13,8 +13,8 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           
           echo "K3S:"
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa k8s-monitor@192.168.208.3 "kubectl get pods -A"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa k8s-monitor@192.168.208.1:32511 "kubectl get pods -A"
           
           echo ""
           echo "K8S:"
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa k8s-monitor@192.168.203.2 "kubectl get pods -A"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa k8s-monitor@192.168.203.2:32511 "kubectl get pods -A"
