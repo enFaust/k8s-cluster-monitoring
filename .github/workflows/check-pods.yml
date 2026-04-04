@@ -1,0 +1,55 @@
+name: Check Kubernetes pod status
+
+on:
+  workflow_dispatch:
+
+jobs:
+  pod-status:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: '1.30.18'
+
+      - name: Configure kubeconfig from secret
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          mkdir -p $HOME/.kube
+          echo "$KUBECONFIG_B64" | base64 --decode > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+          kubectl config view
+
+      - name: Print contexts
+        run: kubectl config get-contexts
+
+      - name: Check all pods status
+        id: check-pods
+        run: |
+          set -euo pipefail
+          kubectl get pods -A
+          not_ready=$(kubectl get pods -A --no-headers 2>/dev/null | awk '$3 != "Running" && $3 != "Completed" {print}')
+          if [ -n "$not_ready" ]; then
+            echo "::error::Found pods that are not Running or Completed:"
+            echo "$not_ready"
+            exit 1
+          fi
+          echo "All pods are Running or Completed."
+
+      - name: Optional Slack notification
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          STATUS: ${{ job.status }}
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "SLACK_WEBHOOK_URL secret is not set; skipping Slack notification."
+            exit 0
+          fi
+          payload=$(jq -n --arg status "$STATUS" --arg repo "${{ github.repository }}" '{text: "Pod status check " + $status + " for " + $repo}')
+          curl -s -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL"
