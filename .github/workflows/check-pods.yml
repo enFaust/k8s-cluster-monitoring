@@ -9,12 +9,11 @@ jobs:
     steps:
       - run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa.pub
+          chmod 600 ~/.ssh/id_rsa.pub
           
           echo "K3S:"
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -p 32511 k8s-monitor@192.168.208.1 "kubectl get pods -A"
           
           echo ""
           echo "K8S:"
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -p 32511 k8s-monitor@192.168.203.2 "kubectl get pods -A"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pub k8s-monitor@192.168.203.2 "kubectl get pods -A"
