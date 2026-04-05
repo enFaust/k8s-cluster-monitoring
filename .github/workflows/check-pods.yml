@@ -1,19 +1,38 @@
-name: Show Pods
+name: Pod status (k3s & k8s)
 
 on:
   workflow_dispatch:
 
 jobs:
-  show:
-    runs-on: ubuntu-latest
+  pod-status:
+    runs-on: self-hosted
     steps:
-      - run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          
-          echo "K3S:"
-          
-          echo ""
-          echo "K8S:"
-          ssh -i ~/.ssh/id_rsa k8s-git-monitor@192.168.208.1 "kubectl get pods -A"
+    
+      - name: Create SSH tunnels
+        run: |
+          ssh -o StrictHostKeyChecking=no -L 6443:127.0.0.1:6443 k8s-git-monitor@192.168.208.1 -f -N
+          ssh -o StrictHostKeyChecking=no -L 6444:127.0.0.1:6444 k8s-git-monitor@192.168.203.1 -f -N
+          sleep 1
+
+      - name: List kubectl contexts
+        run: kubectl config get-contexts
+
+      - name: Check pod status (k3s)
+        run: kubectl get pods -A --context k3s
+
+      - name: Check pod status (k8s)
+        run: kubectl get pods -A --context k8s
+
+      - name: Fail if any pods not Ready
+        id: check
+        run: |
+          failed=0
+          for ctx in k3s k8s; do
+            not_ready=$(kubectl get pods -A --context $ctx --no-headers 2>/dev/null | grep -v "Running\|Completed" | grep -v "^\s*$" || true)
+            if [ -n "$not_ready" ]; then
+              echo "Pods not Running/Completed in context $ctx:"
+              echo "$not_ready"
+              failed=1
+            fi
+          done
+          [ $failed -eq 0 ] && echo "All pods Running or Completed in k3s and k8s." || exit 1
