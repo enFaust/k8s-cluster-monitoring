@@ -11,12 +11,17 @@ jobs:
       KUBECONFIG: /home/k8s-git-monitor/.kube/config-k3s:/home/k8s-git-monitor/.kube/config-k8s
     
     steps:
-
       - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+
+      - name: Cleanup old tunnels
+        run: |
+          pkill -f "ssh.*6443" || true
+          pkill -f "ssh.*6444" || true
+          sleep 2
     
       - name: Create SSH tunnels
         run: |
