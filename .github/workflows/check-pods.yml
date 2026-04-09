@@ -29,6 +29,9 @@ jobs:
           ssh -o StrictHostKeyChecking=no -L 6444:127.0.0.1:6443 k8s-git-monitor@192.168.203.1 -f -N
           sleep 1
 
+      - name: Verify tunnels
+        run: ss -tlnp | grep -E '6443|6444'
+
       - name: List kubectl contexts
         run: kubectl config get-contexts
 
